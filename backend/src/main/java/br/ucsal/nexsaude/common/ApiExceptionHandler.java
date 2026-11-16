@@ -33,6 +33,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
+    /** Duas operações disputaram o mesmo registro (ex.: dois pacientes no mesmo leito). */
+    @ExceptionHandler({org.springframework.dao.OptimisticLockingFailureException.class,
+            org.springframework.dao.DataIntegrityViolationException.class})
+    ProblemDetail conflito(RuntimeException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "Conflito com outra operação simultânea. Atualize os dados e tente de novo.");
+    }
+
     @ExceptionHandler(UnsupportedOperationException.class)
     ProblemDetail naoImplementado(UnsupportedOperationException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_IMPLEMENTED, "Funcionalidade ainda não implementada");

@@ -100,8 +100,10 @@ class AtendimentoIT extends IntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    /** Até a Task 8 não há tabela de setores; qualquer id serve. */
-    protected long setorDeTeste() {
-        return 1L;
+    @org.springframework.beans.factory.annotation.Autowired
+    br.ucsal.nexsaude.leito.SetorRepository setores;
+
+    long setorDeTeste() {
+        return setores.save(new br.ucsal.nexsaude.leito.Setor("Setor " + System.nanoTime(), "ENFERMARIA")).getId();
     }
 }

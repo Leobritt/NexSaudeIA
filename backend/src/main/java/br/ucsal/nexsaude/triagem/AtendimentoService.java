@@ -4,6 +4,8 @@ import br.ucsal.nexsaude.auditoria.AuditoriaService;
 import br.ucsal.nexsaude.auth.UsuarioLogado;
 import br.ucsal.nexsaude.common.NaoEncontradoException;
 import br.ucsal.nexsaude.common.RegraNegocioException;
+import br.ucsal.nexsaude.leito.LeitoService;
+import org.springframework.context.annotation.Lazy;
 import br.ucsal.nexsaude.paciente.PacienteService;
 import br.ucsal.nexsaude.triagem.dto.AtendimentoDto;
 import org.springframework.stereotype.Service;
@@ -32,11 +34,14 @@ public class AtendimentoService {
     private final AtendimentoRepository repo;
     private final PacienteService pacientes;
     private final AuditoriaService auditoria;
+    private final LeitoService leitos;
 
-    public AtendimentoService(AtendimentoRepository repo, PacienteService pacientes, AuditoriaService auditoria) {
+    public AtendimentoService(AtendimentoRepository repo, PacienteService pacientes, AuditoriaService auditoria,
+                              @Lazy LeitoService leitos) {
         this.repo = repo;
         this.pacientes = pacientes;
         this.auditoria = auditoria;
+        this.leitos = leitos;
     }
 
     @Transactional
@@ -78,6 +83,7 @@ public class AtendimentoService {
     @Transactional
     public AtendimentoDto indicarInternacao(Long id, Long setorId) {
         Atendimento a = buscar(id);
+        leitos.exigirSetor(setorId);
         mudarStatus(a, AGUARDANDO_LEITO);
         a.setSetorIndicadoId(setorId);
         return dto(a);

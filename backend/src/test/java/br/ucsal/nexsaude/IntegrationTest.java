@@ -10,8 +10,6 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.jayway.jsonpath.JsonPath;
@@ -23,17 +21,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Base dos testes de integração: sobe um PostgreSQL 16 real, compartilhado entre as classes. */
+/** Base dos testes de integração: um PostgreSQL 16 real, compartilhado por todas as classes. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
 public abstract class IntegrationTest {
 
     public static final String SENHA_TESTE = "senha123";
 
-    @Container
+    /** Um único container para toda a execução (o Ryuk remove ao fim da JVM). */
     @ServiceConnection
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
+
+    static {
+        POSTGRES.start();
+    }
 
     @Autowired protected MockMvc mvc;
     @Autowired protected UsuarioRepository usuarioRepository;
