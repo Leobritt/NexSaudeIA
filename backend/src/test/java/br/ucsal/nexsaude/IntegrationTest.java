@@ -4,6 +4,11 @@ import br.ucsal.nexsaude.auth.JwtService;
 import br.ucsal.nexsaude.auth.Perfil;
 import br.ucsal.nexsaude.auth.Usuario;
 import br.ucsal.nexsaude.auth.UsuarioRepository;
+import br.ucsal.nexsaude.leito.Leito;
+import br.ucsal.nexsaude.leito.LeitoRepository;
+import br.ucsal.nexsaude.leito.Setor;
+import br.ucsal.nexsaude.leito.SetorRepository;
+import br.ucsal.nexsaude.leito.StatusLeito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -40,6 +45,8 @@ public abstract class IntegrationTest {
     @Autowired protected UsuarioRepository usuarioRepository;
     @Autowired protected PasswordEncoder passwordEncoder;
     @Autowired protected JwtService jwtService;
+    @Autowired protected SetorRepository setorRepository;
+    @Autowired protected LeitoRepository leitoRepository;
 
     /** Usuário de teste do perfil (criado na primeira vez), e-mail perfil@teste.local. */
     protected Usuario usuario(Perfil perfil) {
@@ -106,5 +113,21 @@ public abstract class IntegrationTest {
         var req = post("/api/atendimentos/{id}/" + acao, atendimentoId).header("Authorization", bearer(Perfil.MEDICO));
         if (corpo != null) req = req.contentType(MediaType.APPLICATION_JSON).content(corpo);
         mvc.perform(req).andExpect(status().isOk());
+    }
+
+    /** Paciente internado num leito novo; devolve o id da internação. */
+    protected long novaInternacao(boolean consentimento, String... usoContinuo) throws Exception {
+        long sufixo = System.nanoTime();
+        Setor setor = setorRepository.save(new Setor("Setor " + sufixo, "ENFERMARIA"));
+        Leito leito = leitoRepository.save(new Leito("L" + sufixo, setor, StatusLeito.LIVRE));
+        long at = abrirAtendimento(novoPaciente(consentimento, usoContinuo));
+        triar(at, "AMARELO");
+        acaoMedica(at, "iniciar", null);
+        acaoMedica(at, "indicar-internacao", "{\"setorId\":" + setor.getId() + "}");
+        String resp = mvc.perform(post("/api/internacoes").header("Authorization", bearer(Perfil.GESTOR_LEITOS))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"atendimentoId\":" + at + ",\"leitoId\":" + leito.getId() + "}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return id(resp);
     }
 }
