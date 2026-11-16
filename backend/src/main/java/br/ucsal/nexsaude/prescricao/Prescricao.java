@@ -56,6 +56,9 @@ public class Prescricao {
     @Column(name = "hash_assinatura", columnDefinition = "bpchar(64)")
     private String hashAssinatura;
 
+    @Version
+    private long version;
+
     @ElementCollection
     @CollectionTable(name = "item_prescricao", joinColumns = @JoinColumn(name = "prescricao_id"))
     @OrderColumn(name = "ordem")

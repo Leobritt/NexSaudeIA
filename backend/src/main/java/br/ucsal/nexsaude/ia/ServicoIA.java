@@ -47,7 +47,7 @@ public class ServicoIA {
         this.json = json;
     }
 
-    @Transactional
+    /** Sem transação: a chamada à IA (até 10 s) não segura conexão do banco. */
     public SugestaoIA sugerirTriagem(Paciente p, String sintomas, SinaisVitais sinais, boolean riscoIminente) {
         boolean semConsentimento = exigirConsentimento(p, riscoIminente);
         DadosTriagemIA dados = new DadosTriagemIA(p.idade(), p.getSexo(), sintomas, sinais);
@@ -59,11 +59,11 @@ public class ServicoIA {
 
         SugestaoIA s = new SugestaoIA(TipoSugestao.TRIAGEM, p.getId(), entrada, PROMPT_TRIAGEM,
                 ia.modelo(), ia.nomeImplementacao(), riscoIminente);
-        executar(s, () -> ia.sugerirTriagem(dados), r -> s.registrarTriagem(r, json.writeValueAsString(r)));
+        executar(s, () -> validar(ia.sugerirTriagem(dados)), r -> s.registrarTriagem(r, json.writeValueAsString(r)));
         return salvarERegistrar(s, semConsentimento);
     }
 
-    @Transactional
+    /** Sem transação: a chamada à IA (até 10 s) não segura conexão do banco. */
     public SugestaoIA verificarInteracoes(Paciente p, List<String> prescritos) {
         exigirConsentimento(p, false);
         List<String> usoContinuo = p.getMedicamentosUsoContinuo();
@@ -73,7 +73,7 @@ public class ServicoIA {
 
         SugestaoIA s = new SugestaoIA(TipoSugestao.INTERACAO, p.getId(), entrada, PROMPT_INTERACAO,
                 ia.modelo(), ia.nomeImplementacao(), false);
-        executar(s, () -> ia.verificarInteracoes(prescritos, usoContinuo),
+        executar(s, () -> validar(ia.verificarInteracoes(prescritos, usoContinuo)),
                 r -> s.registrarInteracoes(r, json.writeValueAsString(r)));
         return salvarERegistrar(s, false);
     }
@@ -88,6 +88,23 @@ public class ServicoIA {
     @Transactional(readOnly = true)
     public SugestaoIA buscar(Long id) {
         return repo.findById(id).orElseThrow(() -> new NaoEncontradoException("Sugestão de IA", id));
+    }
+
+    /** Resposta incompleta da IA conta como indisponibilidade (nunca vira erro 500). */
+    private static ResultadoTriagemIA validar(ResultadoTriagemIA r) {
+        if (r == null || r.cor() == null) throw new IAIndisponivelException("IA devolveu triagem sem cor");
+        return r;
+    }
+
+    private static ResultadoInteracaoIA validar(ResultadoInteracaoIA r) {
+        if (r == null || r.interacoes() == null) throw new IAIndisponivelException("IA devolveu lista de interações vazia");
+        for (InteracaoIA i : r.interacoes()) {
+            if (i == null || i.medicamentos() == null || i.medicamentos().isEmpty() || i.medicamentos().stream().anyMatch(java.util.Objects::isNull)
+                    || i.gravidade() == null || i.descricao() == null || i.descricao().isBlank()) {
+                throw new IAIndisponivelException("IA devolveu interação incompleta");
+            }
+        }
+        return r;
     }
 
     /** @return true quando a chamada segue sem consentimento, amparada no risco iminente */

@@ -46,7 +46,7 @@ public class ClaudeIA implements AssistenteClinicoIA {
                     @Value("${nexsaude.ia.timeout-seg}") long timeoutSeg) throws IOException {
         this.client = AnthropicOkHttpClient.builder().fromEnv()
                 .timeout(Duration.ofSeconds(timeoutSeg))
-                .maxRetries(1)
+                .maxRetries(0)
                 .build();
         this.modelo = modelo;
         this.promptTriagem = ler("prompts/triagem-v1.txt");

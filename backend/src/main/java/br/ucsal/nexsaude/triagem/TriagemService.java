@@ -7,6 +7,8 @@ import br.ucsal.nexsaude.ia.ServicoIA;
 import br.ucsal.nexsaude.ia.StatusSugestao;
 import br.ucsal.nexsaude.ia.SugestaoIA;
 import br.ucsal.nexsaude.ia.TipoSugestao;
+import br.ucsal.nexsaude.paciente.Paciente;
+import br.ucsal.nexsaude.paciente.PacienteService;
 import br.ucsal.nexsaude.triagem.dto.SugestaoTriagemDto;
 import br.ucsal.nexsaude.triagem.dto.SugestaoTriagemRequest;
 import br.ucsal.nexsaude.triagem.dto.TriagemDto;
@@ -26,20 +28,23 @@ public class TriagemService {
     private final TriagemRepository repo;
     private final ServicoIA ia;
     private final AuditoriaService auditoria;
+    private final PacienteService pacientes;
 
-    public TriagemService(AtendimentoService atendimentos, TriagemRepository repo, ServicoIA ia, AuditoriaService auditoria) {
+    public TriagemService(AtendimentoService atendimentos, TriagemRepository repo, ServicoIA ia, AuditoriaService auditoria,
+                          PacienteService pacientes) {
+        this.pacientes = pacientes;
         this.atendimentos = atendimentos;
         this.repo = repo;
         this.ia = ia;
         this.auditoria = auditoria;
     }
 
-    /** RN-001: só gera a sugestão; nada vira triagem aqui. */
-    @Transactional
+    /** RN-001: só gera a sugestão; nada vira triagem aqui. Sem transação: a IA pode levar até 10 s. */
     public SugestaoTriagemDto sugerir(SugestaoTriagemRequest req) {
         Atendimento a = atendimentos.buscar(req.atendimentoId());
         exigirTriavel(a);
-        SugestaoIA s = ia.sugerirTriagem(a.getPaciente(), req.sintomas(), req.sinais(), req.emRiscoIminente());
+        Paciente paciente = pacientes.buscar(a.getPaciente().getId());
+        SugestaoIA s = ia.sugerirTriagem(paciente, req.sintomas(), req.sinais(), req.emRiscoIminente());
         return new SugestaoTriagemDto(s.getId(), s.getCor(), s.getConfianca(), s.getJustificativa(),
                 s.getImplementacao(), !s.isSucesso(), s.isSucesso() ? null : "IA indisponível: faça a triagem manual");
     }

@@ -40,6 +40,9 @@ public class Atendimento {
     @Column(name = "finalizado_em")
     private OffsetDateTime finalizadoEm;
 
+    @Version
+    private long version;
+
     protected Atendimento() {}
 
     public Atendimento(Paciente paciente) {

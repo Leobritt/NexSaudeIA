@@ -16,6 +16,7 @@ import br.ucsal.nexsaude.prescricao.dto.ItemPrescricaoDto;
 import br.ucsal.nexsaude.prescricao.dto.PrescricaoDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -38,10 +39,13 @@ public class PrescricaoService {
     private final AuditoriaService auditoria;
     private final JsonMapper json;
     private final PacienteService pacientes;
+    private final TransactionTemplate tx;
 
     public PrescricaoService(PrescricaoRepository repo, InternacaoService internacoes, ServicoIA ia,
-                             AuditoriaService auditoria, JsonMapper json, PacienteService pacientes) {
+                             AuditoriaService auditoria, JsonMapper json, PacienteService pacientes,
+                             TransactionTemplate tx) {
         this.pacientes = pacientes;
+        this.tx = tx;
         this.repo = repo;
         this.internacoes = internacoes;
         this.ia = ia;
@@ -71,32 +75,58 @@ public class PrescricaoService {
         return dto(p);
     }
 
-    /** RF-08. Sem consentimento ou com a IA fora do ar, marca IA_INDISPONIVEL em vez de falhar. */
-    @Transactional
+    /**
+     * RF-08, em três etapas para a IA (até 10 s) não segurar transação: lê a prescrição,
+     * chama a IA e grava o resultado. Sem consentimento ou com a IA fora do ar, marca
+     * IA_INDISPONIVEL em vez de falhar. Se os itens mudarem no meio, recusa.
+     */
     public PrescricaoDto verificar(Long id) {
-        Prescricao p = buscar(id);
-        if (p.getStatus() != StatusPrescricao.RASCUNHO) {
-            throw new RegraNegocioException("Prescrição assinada não pode ser alterada");
-        }
-        List<String> nomes = p.getItens().stream().map(ItemPrescricao::getMedicamento).toList();
-        Paciente paciente = p.getInternacao().getPaciente();
-        if (!pacientes.temConsentimentoIa(paciente.getId())) {
-            p.registrarVerificacao(StatusVerificacao.IA_INDISPONIVEL, List.of(), null);
-            auditoria.registrar("VERIFICAR", "Prescricao", id, Map.of("resultado", "SEM_CONSENTIMENTO"));
-            return dto(p);
-        }
-        SugestaoIA s = ia.verificarInteracoes(paciente, nomes);
-        if (s.isSucesso()) {
-            List<AlertaInteracao> alertas = s.getInteracoes().stream()
-                    .map(x -> new AlertaInteracao(x.medicamentos(), x.gravidade(), x.descricao(), x.recomendacao()))
-                    .toList();
-            p.registrarVerificacao(StatusVerificacao.VERIFICADA_IA, alertas, s.getId());
+        record Leitura(Long pacienteId, List<String> nomes) {}
+        Leitura lida = tx.execute(st -> {
+            Prescricao p = buscar(id);
+            if (p.getStatus() != StatusPrescricao.RASCUNHO) {
+                throw new RegraNegocioException("Prescrição assinada não pode ser alterada");
+            }
+            return new Leitura(p.getInternacao().getPaciente().getId(), nomes(p));
+        });
+
+        StatusVerificacao resultado;
+        List<AlertaInteracao> alertas = List.of();
+        Long sugestaoId = null;
+        if (!pacientes.temConsentimentoIa(lida.pacienteId())) {
+            resultado = StatusVerificacao.IA_INDISPONIVEL;
         } else {
-            p.registrarVerificacao(StatusVerificacao.IA_INDISPONIVEL, List.of(), s.getId());
+            Paciente paciente = pacientes.buscar(lida.pacienteId());
+            SugestaoIA s = ia.verificarInteracoes(paciente, lida.nomes());
+            sugestaoId = s.getId();
+            if (s.isSucesso()) {
+                resultado = StatusVerificacao.VERIFICADA_IA;
+                alertas = s.getInteracoes().stream()
+                        .map(x -> new AlertaInteracao(x.medicamentos(), x.gravidade(), x.descricao(), x.recomendacao()))
+                        .toList();
+            } else {
+                resultado = StatusVerificacao.IA_INDISPONIVEL;
+            }
         }
-        auditoria.registrar("VERIFICAR", "Prescricao", id,
-                Map.of("resultado", p.getStatusVerificacao().name(), "alertas", p.getAlertas().size()));
-        return dto(p);
+
+        StatusVerificacao fResultado = resultado;
+        List<AlertaInteracao> fAlertas = alertas;
+        Long fSugestao = sugestaoId;
+        return tx.execute(st -> {
+            Prescricao p = buscar(id);
+            if (!nomes(p).equals(lida.nomes())) {
+                throw new RegraNegocioException("Os itens mudaram durante a verificação. Verifique de novo.");
+            }
+            p.registrarVerificacao(fResultado, fAlertas, fSugestao);
+            auditoria.registrar("VERIFICAR", "Prescricao", id,
+                    Map.of("resultado", fSugestao == null && fResultado == StatusVerificacao.IA_INDISPONIVEL
+                            ? "SEM_CONSENTIMENTO" : fResultado.name(), "alertas", fAlertas.size()));
+            return dto(p);
+        });
+    }
+
+    private static List<String> nomes(Prescricao p) {
+        return p.getItens().stream().map(ItemPrescricao::getMedicamento).toList();
     }
 
     /** RF-07 + RN-004. A "assinatura" é médico + data/hora + SHA-256 do conteúdo. */

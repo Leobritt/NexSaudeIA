@@ -54,6 +54,9 @@ public class LeitoService {
             throw new RegraNegocioException("Leito só fica ocupado por meio de uma internação");
         }
         Leito l = buscar(id);
+        if (l.getStatus() == StatusLeito.OCUPADO) {
+            throw new RegraNegocioException("Leito ocupado: libere pela alta ou pela transferência do paciente");
+        }
         mudar(l, status);
         return dto(l, null);
     }
