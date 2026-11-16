@@ -35,6 +35,9 @@ class ApiExceptionHandlerTest {
         @GetMapping("/teste/nao-encontrado")
         void naoEncontrado() { throw new NaoEncontradoException("Paciente", 7); }
 
+        @GetMapping("/teste/nao-implementado")
+        void naoImplementado() { throw new UnsupportedOperationException(); }
+
         @PostMapping("/teste/validacao")
         void validacao(@Valid @RequestBody Corpo corpo) {}
     }
@@ -51,6 +54,12 @@ class ApiExceptionHandlerTest {
         mvc.perform(get("/teste/nao-encontrado"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("Paciente 7 não encontrado"));
+    }
+
+    @Test
+    void naoImplementadoVira501() throws Exception {
+        mvc.perform(get("/teste/nao-implementado"))
+                .andExpect(status().isNotImplemented());
     }
 
     @Test
