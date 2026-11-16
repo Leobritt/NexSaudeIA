@@ -25,11 +25,24 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/nexsaude
       DB_USER: nexsaude
       DB_PASSWORD: nexsaude
-      # Opcional (.env na raiz): NEXSAUDE_IA_MODO=claude e ANTHROPIC_API_KEY=...
+      # IA: simulada (padrão) | ollama (gratuita, local) | claude (paga). Configure no .env da raiz.
       NEXSAUDE_IA_MODO: ${NEXSAUDE_IA_MODO:-simulada}
+      NEXSAUDE_IA_TIMEOUT_SEG: ${NEXSAUDE_IA_TIMEOUT_SEG:-10}
+      NEXSAUDE_IA_OLLAMA_URL: http://ollama:11434
+      NEXSAUDE_IA_OLLAMA_MODELO: ${NEXSAUDE_IA_OLLAMA_MODELO:-qwen2.5:3b}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8080:8080"
 
+  # IA local gratuita. Só sobe com: docker compose --profile ollama up --build
+  ollama:
+    image: ollama/ollama
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
 volumes:
   pgdata:
+  ollama:

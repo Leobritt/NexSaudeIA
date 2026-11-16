@@ -26,6 +26,8 @@ docker compose up --build
 - API: http://localhost:8080
 - Swagger (contrato da API): http://localhost:8080/swagger-ui.html
 - Usuários de teste (senha `nexsaude123`): `enfermeiro@`, `medico@`, `gestor@`, `auditor@` e `admin@nexsaude.local`
+- IA: simulada por padrão; também roda com **Ollama** (gratuita, local) ou **Claude** (paga). Veja o
+  [README do backend](backend/README.md#ia).
 
 ## Funcionalidades do MVP
 

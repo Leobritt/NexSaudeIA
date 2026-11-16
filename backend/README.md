@@ -43,21 +43,51 @@ para IA (mostra a RN-002).
 
 ## IA
 
-Por padrão a IA é **simulada** (regras fixas, sem custo e sem internet). Para usar a Claude API:
+A IA fica atrás de uma interface e tem três implementações, escolhidas por `NEXSAUDE_IA_MODO`:
+
+| Modo | Custo | Quando usar |
+|---|---|---|
+| `simulada` (padrão) | grátis | desenvolvimento e plano B da apresentação (regras fixas, sem internet) |
+| `ollama` | grátis | IA de verdade rodando na própria máquina; os dados do paciente não saem do computador |
+| `claude` | pago | Claude API (precisa de `ANTHROPIC_API_KEY`) |
+
+Se a IA falhar, recusar ou passar do tempo limite, o sistema mostra "IA indisponível" e segue com a
+triagem/verificação manual.
+
+### Ollama (gratuita, local)
+
+Crie um arquivo `.env` na raiz (ele não vai para o Git):
+
+```
+NEXSAUDE_IA_MODO=ollama
+NEXSAUDE_IA_TIMEOUT_SEG=60
+```
+
+Depois, na raiz:
+
+```bash
+docker compose --profile ollama up --build -d
+docker compose exec ollama ollama pull qwen2.5:3b     # só na primeira vez (~2 GB)
+```
+
+- Precisa de uns 4 GB de RAM livres. Sem placa de vídeo, cada resposta leva de alguns segundos a ~30 s,
+  por isso o tempo limite maior. A primeira chamada é a mais lenta (o modelo é carregado na memória).
+- Para outro modelo: `NEXSAUDE_IA_OLLAMA_MODELO=llama3.2:3b` no `.env` e o `ollama pull` correspondente.
+- Rodando o backend fora do Docker, o Ollama é procurado em `http://localhost:11434`.
+
+### Claude (paga)
+
+No `.env`: `NEXSAUDE_IA_MODO=claude` e `ANTHROPIC_API_KEY=...`. Sem Docker:
 
 ```bash
 NEXSAUDE_IA_MODO=claude ANTHROPIC_API_KEY=sk-ant-... ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Com Docker, crie um arquivo `.env` na raiz (ele não vai para o Git) com `NEXSAUDE_IA_MODO=claude` e
-`ANTHROPIC_API_KEY=...` e rode `docker compose up --build`. Se a IA falhar, recusar ou passar de 10 s,
-o sistema mostra "IA indisponível" e segue com a triagem/verificação manual.
-
 ## Testes
 
 ```bash
 cd backend
-./mvnw test     # 129 testes; precisa do Docker (Testcontainers sobe um PostgreSQL)
+./mvnw test     # 137 testes; precisa do Docker (Testcontainers sobe um PostgreSQL)
 ```
 
 Testes unitários terminam em `Test`; os de integração (API + banco real) terminam em `IT`.

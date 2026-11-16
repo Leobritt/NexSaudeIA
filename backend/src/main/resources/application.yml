@@ -20,6 +20,10 @@ nexsaude:
     segredo: ${NEXSAUDE_JWT_SEGREDO:dev-segredo-nexsaude-ia-trocar-em-producao-0123456789}
     expiracao-min: 480
   ia:
+    # simulada (padrão, regras fixas) | ollama (gratuita, local) | claude (paga)
     modo: ${NEXSAUDE_IA_MODO:simulada}
     modelo: ${NEXSAUDE_IA_MODELO:claude-opus-5-5}
-    timeout-seg: 10
+    timeout-seg: ${NEXSAUDE_IA_TIMEOUT_SEG:10}
+    ollama:
+      url: ${NEXSAUDE_IA_OLLAMA_URL:http://localhost:11434}
+      modelo: ${NEXSAUDE_IA_OLLAMA_MODELO:qwen2.5:3b}
