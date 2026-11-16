@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: nexsaude
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexsaude}
+    username: ${DB_USER:nexsaude}
+    password: ${DB_PASSWORD:nexsaude}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+nexsaude:
+  jwt:
+    # Em produção, defina NEXSAUDE_JWT_SEGREDO. O padrão serve só para desenvolvimento.
+    segredo: ${NEXSAUDE_JWT_SEGREDO:dev-segredo-nexsaude-ia-trocar-em-producao-0123456789}
+    expiracao-min: 480
+  ia:
+    modo: ${NEXSAUDE_IA_MODO:simulada}
+    modelo: ${NEXSAUDE_IA_MODELO:claude-opus-5-5}
+    timeout-seg: 10
