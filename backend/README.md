@@ -46,14 +46,25 @@ para IA (mostra a RN-002).
 Por padrão a IA é **simulada** (regras fixas, sem custo e sem internet). Para usar a Claude API:
 
 ```bash
-NEXSAUDE_IA_MODO=claude ANTHROPIC_API_KEY=sk-ant-... ./mvnw spring-boot:run
+NEXSAUDE_IA_MODO=claude ANTHROPIC_API_KEY=sk-ant-... ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
+
+Com Docker, crie um arquivo `.env` na raiz (ele não vai para o Git) com `NEXSAUDE_IA_MODO=claude` e
+`ANTHROPIC_API_KEY=...` e rode `docker compose up --build`. Se a IA falhar, recusar ou passar de 10 s,
+o sistema mostra "IA indisponível" e segue com a triagem/verificação manual.
 
 ## Testes
 
 ```bash
-./mvnw test     # precisa do Docker (Testcontainers sobe um PostgreSQL)
+cd backend
+./mvnw test     # 129 testes; precisa do Docker (Testcontainers sobe um PostgreSQL)
 ```
+
+Testes unitários terminam em `Test`; os de integração (API + banco real) terminam em `IT`.
+
+## Observação sobre o banco local
+
+Use sempre o perfil `dev` no mesmo volume do Docker. Se precisar zerar os dados: `docker compose down -v`.
 
 ## Códigos de resposta
 
@@ -63,5 +74,5 @@ NEXSAUDE_IA_MODO=claude ANTHROPIC_API_KEY=sk-ant-... ./mvnw spring-boot:run
 | 401 | sem token, token inválido/expirado ou login recusado |
 | 403 | perfil sem permissão |
 | 404 | recurso não encontrado |
+| 409 | conflito com outra operação simultânea (ex.: dois pacientes no mesmo leito) |
 | 422 | regra de negócio violada (`detail` explica) |
-| 501 | rota publicada no contrato, ainda não implementada |
