@@ -15,5 +15,21 @@ services:
       timeout: 3s
       retries: 10
 
+  backend:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/nexsaude
+      DB_USER: nexsaude
+      DB_PASSWORD: nexsaude
+      # Opcional (.env na raiz): NEXSAUDE_IA_MODO=claude e ANTHROPIC_API_KEY=...
+      NEXSAUDE_IA_MODO: ${NEXSAUDE_IA_MODO:-simulada}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8080:8080"
+
 volumes:
   pgdata:

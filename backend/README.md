@@ -2,7 +2,17 @@
 
 API REST em Java 21 + Spring Boot 4, com PostgreSQL 16.
 
-## Rodar localmente
+## Rodar tudo com um comando (para o time de front)
+
+Pré-requisito: só o Docker.
+
+```bash
+docker compose up --build     # na raiz do repositório
+```
+
+A API fica em http://localhost:8080, já com os dados de demonstração.
+
+## Rodar para desenvolver o backend
 
 Pré-requisitos: JDK 21 e Docker.
 
@@ -17,11 +27,19 @@ cd backend
 
 ## Usuários de desenvolvimento
 
-| Perfil | E-mail | Senha |
-|---|---|---|
-| ADMIN | admin@nexsaude.local | nexsaude123 |
+Todos com a senha `nexsaude123`. Só o admin existe fora do perfil `dev`.
 
-Os outros perfis entram com os dados de demonstração (perfil `dev`).
+| Perfil | E-mail |
+|---|---|
+| ADMIN | admin@nexsaude.local |
+| ENFERMEIRO | enfermeiro@nexsaude.local |
+| MEDICO | medico@nexsaude.local |
+| GESTOR_LEITOS | gestor@nexsaude.local |
+| AUDITOR | auditor@nexsaude.local |
+
+O perfil `dev` também cria 3 setores (Pronto-Socorro, Clínica Médica, UTI) com 15 leitos e 5 pacientes.
+Maria das Graças usa varfarina (prescrever AAS a ela mostra a interação grave). Luíza não deu consentimento
+para IA (mostra a RN-002).
 
 ## IA
 
