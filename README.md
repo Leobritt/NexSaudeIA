@@ -11,7 +11,7 @@ interação medicamentosa na prescrição só valem depois da confirmação huma
 | Pasta | Conteúdo |
 |---|---|
 | `backend/` | API REST em Java 21 + Spring Boot 4, PostgreSQL 16 ([README do backend](backend/README.md)) |
-| `frontend/` | Interface em React (em desenvolvimento) |
+| `frontend/` | Interface em React + TypeScript + Vite |
 | `docs/requisitos/` | Especificação de Requisitos (ERS) |
 | `docs/superpowers/` | Design e plano de implementação do backend |
 
@@ -23,6 +23,7 @@ Pré-requisito: Docker.
 docker compose up --build
 ```
 
+- Front-end: http://localhost:5173
 - API: http://localhost:8080
 - Swagger (contrato da API): http://localhost:8080/swagger-ui.html
 - Usuários de teste (senha `nexsaude123`): `enfermeiro@`, `medico@`, `gestor@`, `auditor@` e `admin@nexsaude.local`
